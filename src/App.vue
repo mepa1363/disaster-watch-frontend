@@ -92,8 +92,8 @@ export default {
       .then(response => {
         return ndjsonStream(response.body);
       })
-      .then(exampleStream => {
-        const reader = exampleStream.getReader();
+      .then(stream => {
+        const reader = stream.getReader();
         let read;
         reader.read().then(
           (read = result => {

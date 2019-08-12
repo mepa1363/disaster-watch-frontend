@@ -4,7 +4,7 @@
       <v-list>
         <v-list-tile avatar>
           <span class="app-logo">
-            <img src="./assets/logo.svg">
+            <img src="./assets/logo.svg" />
           </span>
           <v-list-tile-content>
             <v-list-tile-title
@@ -16,7 +16,7 @@
       <v-list class="app-list" three-line>
         <v-list-tile v-if="tweets.length === 0">
           <v-list-tile-avatar class="app-search">
-            <img src="./assets/search.gif" width="50">
+            <img src="./assets/search.gif" width="50" />
           </v-list-tile-avatar>
           <v-list-tile-content>
             <v-list-tile-title class="app-search-text">Searching twitter...</v-list-tile-title>
@@ -88,7 +88,7 @@ export default {
     };
   },
   mounted() {
-    fetch("http://34.213.187.49/api")
+    fetch("https://dwapi.townshipcanada.com/api")
       .then(response => {
         return ndjsonStream(response.body);
       })

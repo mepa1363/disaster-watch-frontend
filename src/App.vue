@@ -28,7 +28,7 @@
             <v-card-title primary-title>
               <div>
                 <h3 class="headline mb-0 text-capitalize" v-html="tweet.category"></h3>
-                <div class="caption grey--text text--darken-2">{{ tweet.time }}</div>
+                <div class="caption grey--text text--darken-2">{{ new Date(tweet.time).toString() }}</div>
                 <div v-linkified>{{ tweet.text }}</div>
               </div>
             </v-card-title>

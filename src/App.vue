@@ -19,26 +19,32 @@
             <img src="./assets/search.gif" width="50" />
           </v-list-tile-avatar>
           <v-list-tile-content>
-            <v-list-tile-title class="app-search-text">Searching twitter...</v-list-tile-title>
+            <v-list-tile-title class="app-search-text">Waiting for tweets...</v-list-tile-title>
           </v-list-tile-content>
         </v-list-tile>
         <template v-for="tweet in tweets">
-          <v-card :id="tweet.id" :key="tweet.index" class="elevation-0">
-            <v-img v-if="tweet.image !== null" :src="tweet.image" aspect-ratio="2.75"></v-img>
+          <v-card :id="tweet.properties.id" :key="tweet.index" class="elevation-0">
+            <v-img
+              v-if="tweet.properties.image !== null"
+              :src="tweet.properties.image"
+              aspect-ratio="2.75"
+            ></v-img>
             <v-card-title primary-title>
               <div>
-                <h3 class="headline mb-0 text-capitalize" v-html="tweet.category"></h3>
-                <div class="caption grey--text text--darken-2">{{ new Date(tweet.time).toString() }}</div>
-                <div v-linkified>{{ tweet.text }}</div>
+                <h3 class="headline mb-0 text-capitalize" v-html="tweet.properties.category"></h3>
+                <div
+                  class="caption grey--text text--darken-2"
+                >{{ new Date(tweet.properties.time).toString() }}</div>
+                <div v-linkified>{{ tweet.properties.text }}</div>
               </div>
             </v-card-title>
             <v-card-actions class="pa-3">
-              <v-btn icon @click="zoomToLocation(tweet.location)">
+              <v-btn icon @click="zoomToLocation(tweet.geometry.coordinates)">
                 <v-icon color="red">place</v-icon>
               </v-btn>
-              {{ tweet.placeName }}
+              {{ tweet.properties.placeName }}
               <v-spacer></v-spacer>
-              Confidence: {{ Math.round(tweet.score * 10000) / 100 }}%
+              Confidence: {{ Math.round(tweet.properties.score * 10000) / 100 }}%
             </v-card-actions>
           </v-card>
           <v-divider :key="tweet.index"></v-divider>
@@ -66,6 +72,9 @@
           </div>
           <div>
             <i class="app-map-legend-item" style="background: #e6ab02"></i>Bombing
+          </div>
+          <div>
+            <i class="app-map-legend-item" style="background: #a6761d"></i>Wildfire
           </div>
         </v-card>
       </v-container>
@@ -101,8 +110,24 @@ export default {
               return;
             }
             reader.read().then(read);
-            this.recentTweet = result.value;
-            this.tweets.push(result.value);
+            let geojson = {
+              type: "Feature",
+              geometry: {
+                type: "Point",
+                coordinates: result.value.location
+              },
+              properties: {
+                id: result.value.id,
+                category: result.value.category,
+                time: result.value.time,
+                text: result.value.text,
+                image: result.value.image,
+                score: result.value.score,
+                placeName: result.value.placeName
+              }
+            };
+            this.recentTweet = geojson;
+            this.tweets.push(geojson);
           })
         );
       });
@@ -121,32 +146,25 @@ export default {
         maxWidth: 80
       })
     );
-    this.map = map;
-  },
-  methods: {
-    zoomToLocation(location) {
-      this.map.flyTo({ center: location, zoom: 9 });
-    }
-  },
-  watch: {
-    recentTweet() {
-      this.map.addLayer({
-        id: this.recentTweet.id,
-        type: "circle",
-        source: {
-          type: "geojson",
-          data: {
-            type: "Feature",
-            geometry: {
-              type: "Point",
-              coordinates: this.recentTweet.location
-            },
-            properties: {
-              id: this.recentTweet.id,
-              category: this.recentTweet.category
-            }
+    map.on("load", () => {
+      map.addSource("tweets", {
+        type: "geojson",
+        data: {
+          type: "Feature",
+          geometry: {
+            type: "Point",
+            coordinates: [0, 0]
+          },
+          properties: {
+            id: 0,
+            category: "null"
           }
-        },
+        }
+      });
+      map.addLayer({
+        id: "tweets",
+        type: "circle",
+        source: "tweets",
         paint: {
           "circle-radius": {
             base: 6,
@@ -157,7 +175,7 @@ export default {
             ["get", "category"],
             "earthquake",
             "#1b9e77",
-            "flood",
+            "floods",
             "#d95f02",
             "explosion",
             "#7570b3",
@@ -167,11 +185,27 @@ export default {
             "#66a61e",
             "bombing",
             "#e6ab02",
+            "wildfires",
+            "#a6761d",
             "#ccc"
           ]
         }
       });
-      this.map.on("click", this.recentTweet.id, e => {
+    });
+    this.map = map;
+  },
+  methods: {
+    zoomToLocation(location) {
+      this.map.flyTo({ center: location, zoom: 9 });
+    }
+  },
+  watch: {
+    recentTweet() {
+      this.map.getSource("tweets").setData({
+        type: "FeatureCollection",
+        features: this.tweets
+      });
+      this.map.on("click", "tweets", e => {
         const id = e.features[0].properties.id;
         document.getElementById(`${id}`).scrollIntoView({
           behavior: "smooth",
@@ -182,11 +216,11 @@ export default {
           document.getElementById(`${id}`).style.border = "none";
         }, 3000);
       });
-      this.map.on("mouseenter", this.recentTweet.id, () => {
+      this.map.on("mouseenter", "tweets", () => {
         this.map.getCanvas().style.cursor = "pointer";
       });
 
-      this.map.on("mouseleave", this.recentTweet.id, () => {
+      this.map.on("mouseleave", "tweets", () => {
         this.map.getCanvas().style.cursor = "";
       });
     }
